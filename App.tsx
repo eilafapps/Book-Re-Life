@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Page, User } from './types';
 import Layout from './components/Layout';
@@ -11,6 +10,7 @@ import Admin from './pages/Admin';
 import Login from './pages/Login';
 import { ToastProvider } from './components/ui/Toast';
 import DonorPayouts from './pages/DonorPayouts';
+import { api } from './services/mockApi';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -22,6 +22,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    api.logout();
     setCurrentUser(null);
   };
 

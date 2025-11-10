@@ -2,13 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/mockApi';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
-import { Donor } from '../types';
-
-interface PayoutData {
-    donor: Donor;
-    totalOwed: number;
-    soldBooksCount: number;
-}
+// Fix: Imported PayoutData from the central types file.
+import { Donor, PayoutData } from '../types';
 
 const DonorPayouts: React.FC = () => {
     const [payouts, setPayouts] = useState<PayoutData[]>([]);
