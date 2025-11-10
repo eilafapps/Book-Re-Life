@@ -7,12 +7,16 @@ import { User, Role } from '@prisma/client';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-very-secret-key-that-should-be-in-env';
 
 // Extend Express Request type to include user payload from JWT
-export interface AuthenticatedRequest extends ExpressRequest {
+// Fix: Changed from an interface extending ExpressRequest to a type alias with an intersection.
+// This is a more robust way to augment existing types and can prevent issues where properties
+// from the base type (like 'headers') are not correctly inherited, especially in projects with
+// potential global type conflicts (e.g., from the DOM 'Request' type).
+export type AuthenticatedRequest = ExpressRequest & {
     user?: {
         id: string;
         role: Role;
     };
-}
+};
 
 export const generateToken = (user: User): string => {
     const payload = { id: user.id, role: user.role };
