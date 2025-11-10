@@ -1,33 +1,32 @@
 
-// Fix: Use an alias for the Request type from express to avoid potential global type conflicts.
-import { type NextFunction } from 'express';
+// Fix: Use direct named imports for Express types to avoid global type conflicts.
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-// Fix: Use a wildcard import for Prisma Client to resolve module issues.
-import * as Prisma from '@prisma/client';
+// Fix: Use named imports for Prisma Client types to resolve module issues.
+import { Role, User } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-very-secret-key-that-should-be-in-env';
 
 // Extend Express Request type to include user payload from JWT
-// Fix: Changed from an interface extending ExpressRequest to a type alias with an intersection.
-// This is a more robust way to augment existing types and can prevent issues where properties
-// from the base type (like 'headers') are not correctly inherited, especially in projects with
-// potential global type conflicts (e.g., from the DOM 'Request' type).
-// Fix: Use import('express').Request to avoid global type conflicts.
-export type AuthenticatedRequest = import('express').Request & {
+// Fix: Use the imported `Request` type for augmentation.
+export type AuthenticatedRequest = Request & {
     user?: {
         id: string;
-        role: Prisma.Role;
+        // Fix: Use the imported `Role` enum.
+        role: Role;
     };
 };
 
-export const generateToken = (user: Prisma.User): string => {
+// Fix: Use the imported `User` type.
+export const generateToken = (user: User): string => {
     const payload = { id: user.id, role: user.role };
     return jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
 };
 
-export const authenticateToken = (requiredRole?: Prisma.Role) => {
-    // Fix: Use import('express').Response to avoid global type conflicts and ensure methods like .sendStatus() are available.
-    return (req: AuthenticatedRequest, res: import('express').Response, next: NextFunction) => {
+// Fix: Use the imported `Role` enum.
+export const authenticateToken = (requiredRole?: Role) => {
+    // Fix: Use the imported `Response` and `NextFunction` types.
+    return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
@@ -39,12 +38,14 @@ export const authenticateToken = (requiredRole?: Prisma.Role) => {
             if (err) {
                 return res.sendStatus(403); // Forbidden
             }
-            req.user = user as { id: string, role: Prisma.Role };
+            // Fix: Use the imported `Role` enum.
+            req.user = user as { id: string, role: Role };
 
             // If a specific role is required, check if the user has it
             if (requiredRole && req.user.role !== requiredRole) {
                  // Admins can access everything a staff member can
-                if(requiredRole === Prisma.Role.Staff && req.user.role === Prisma.Role.Admin) {
+                // Fix: Use the imported `Role` enum.
+                if(requiredRole === Role.Staff && req.user.role === Role.Admin) {
                     return next();
                 }
                 return res.sendStatus(403); // Forbidden

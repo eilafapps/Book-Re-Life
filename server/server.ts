@@ -1,9 +1,9 @@
 
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
-// Fix: Use a wildcard import for Prisma Client to resolve module resolution errors.
-import * as Prisma from '@prisma/client';
+// Fix: Use a named imports for Prisma Client to resolve module resolution errors.
+import { PrismaClient, Role, BookCondition } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,8 +13,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// Fix: Instantiate PrismaClient from the wildcard import.
-const prisma = new Prisma.PrismaClient();
+// Fix: Instantiate PrismaClient from the named import.
+const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
@@ -44,14 +44,14 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // --- USER MANAGEMENT (Admin only) ---
-// Fix: Use Prisma.Role for role checks.
-app.get('/api/users', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.get('/api/users', authenticateToken(Role.Admin), async (req, res) => {
     const users = await prisma.user.findMany({ select: { id: true, username: true, role: true, isActive: true } });
     res.json(users);
 });
 
-// Fix: Use Prisma.Role for role checks.
-app.post('/api/users', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.post('/api/users', authenticateToken(Role.Admin), async (req, res) => {
     const { username, password, role } = req.body;
     try {
         const passwordHash = await bcrypt.hash(password, 10);
@@ -63,8 +63,8 @@ app.post('/api/users', authenticateToken(Prisma.Role.Admin), async (req, res) =>
     }
 });
 
-// Fix: Use Prisma.Role for role checks.
-app.patch('/api/users/:id/toggle-status', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.patch('/api/users/:id/toggle-status', authenticateToken(Role.Admin), async (req, res) => {
     const { id } = req.params;
     try {
         const user = await prisma.user.findUnique({ where: { id } });
@@ -88,8 +88,8 @@ app.get('/api/categories', async (req, res) => res.json(await prisma.category.fi
 app.get('/api/authors', async (req, res) => res.json(await prisma.author.findMany({ orderBy: { name: 'asc' } })));
 app.get('/api/book-titles', async (req, res) => res.json(await prisma.bookTitle.findMany({ orderBy: { title: 'asc' } })));
 
-// Fix: Use Prisma.Role for role checks.
-app.post('/api/lookup/:type', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.post('/api/lookup/:type', authenticateToken(Role.Admin), async (req, res) => {
     const { type } = req.params;
     const { name } = req.body;
     try {
@@ -119,8 +119,8 @@ app.post('/api/donors', async (req, res) => {
     }
 });
 
-// Fix: Use Prisma.Role for role checks.
-app.put('/api/donors/:id', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.put('/api/donors/:id', authenticateToken(Role.Admin), async (req, res) => {
     const { id } = req.params;
     const { name, email, phone } = req.body;
     try {
@@ -131,8 +131,8 @@ app.put('/api/donors/:id', authenticateToken(Prisma.Role.Admin), async (req, res
     }
 });
 
-// Fix: Use Prisma.Role for role checks.
-app.patch('/api/donors/:id/toggle-status', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.patch('/api/donors/:id/toggle-status', authenticateToken(Role.Admin), async (req, res) => {
     const { id } = req.params;
     const donor = await prisma.donor.findUnique({ where: { id } });
     if (!donor) return res.status(404).json({ message: "Donor not found." });
@@ -188,8 +188,8 @@ app.post('/api/inventory', async (req, res) => {
             data: {
                 bookTitleId: bookTitle.id,
                 donorId,
-                // Fix: Use Prisma.BookCondition for the type cast.
-                condition: condition as Prisma.BookCondition,
+                // Fix: Use BookCondition for the type cast.
+                condition: condition as BookCondition,
                 shelfLocation,
                 buyingPrice,
                 sellingPrice,
@@ -242,8 +242,8 @@ app.post('/api/sales', async (req, res) => {
 });
 
 // --- REPORTING ROUTES ---
-// Fix: Use Prisma.Role for role checks.
-app.get('/api/dashboard', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.get('/api/dashboard', authenticateToken(Role.Admin), async (req, res) => {
     const allBooks = await prisma.bookCopy.findMany();
     const soldBooks = allBooks.filter(b => b.isSold);
     const totalRevenue = await prisma.sale.aggregate({ _sum: { total: true } });
@@ -279,8 +279,8 @@ app.get('/api/dashboard', authenticateToken(Prisma.Role.Admin), async (req, res)
     });
 });
 
-// Fix: Use Prisma.Role for role checks.
-app.get('/api/payouts/donors', authenticateToken(Prisma.Role.Admin), async (req, res) => {
+// Fix: Use Role for role checks.
+app.get('/api/payouts/donors', authenticateToken(Role.Admin), async (req, res) => {
     const soldBooks = await prisma.bookCopy.findMany({
         where: { isSold: true, isFreeDonation: false },
         include: { donor: true }
@@ -307,7 +307,7 @@ app.get('/api/payouts/donors', authenticateToken(Prisma.Role.Admin), async (req,
 app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 // Fix: Add explicit types for req and res to resolve overload ambiguity.
-app.get('*', (req: express.Request, res: express.Response) => {
+app.get('*', (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
@@ -320,9 +320,9 @@ async function main() {
         const staffPass = await bcrypt.hash('staff123', 10);
         await prisma.user.createMany({
             data: [
-                // Fix: Use Prisma.Role for enum values.
-                { username: 'admin', passwordHash: adminPass, role: Prisma.Role.Admin },
-                { username: 'staff', passwordHash: staffPass, role: Prisma.Role.Staff },
+                // Fix: Use Role for enum values.
+                { username: 'admin', passwordHash: adminPass, role: Role.Admin },
+                { username: 'staff', passwordHash: staffPass, role: Role.Staff },
             ]
         });
         console.log("Initial users created.");

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Page, User } from '@/types';
 import Layout from '@/components/Layout';
 import Dashboard from '@/pages/Dashboard';
