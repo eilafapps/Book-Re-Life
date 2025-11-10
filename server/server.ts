@@ -1,11 +1,16 @@
 
+
 import express from 'express';
 import cors from 'cors';
 // Fix: Use a wildcard import for Prisma Client to resolve module resolution errors.
 import * as Prisma from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { authenticateToken, generateToken } from './auth';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { authenticateToken, generateToken } from './auth.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 // Fix: Instantiate PrismaClient from the wildcard import.
@@ -14,6 +19,9 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Fix: Removed /api/config endpoint as it is insecure and against Gemini API guidelines.
+// The API key should be accessed via process.env in the client build.
 
 // --- AUTH ROUTES ---
 app.post('/api/auth/login', async (req, res) => {
@@ -72,7 +80,7 @@ app.patch('/api/users/:id/toggle-status', authenticateToken(Prisma.Role.Admin), 
 
 
 // All routes below are protected
-app.use(authenticateToken());
+app.use('/api', authenticateToken());
 
 // --- LOOKUP DATA ROUTES ---
 app.get('/api/languages', async (req, res) => res.json(await prisma.language.findMany({ orderBy: { name: 'asc' } })));
@@ -294,6 +302,14 @@ app.get('/api/payouts/donors', authenticateToken(Prisma.Role.Admin), async (req,
     res.json(Object.values(payouts));
 });
 
+
+// Serve frontend
+app.use(express.static(path.join(__dirname, '..', 'dist')));
+
+// Fix: Add explicit types for req and res to resolve overload ambiguity.
+app.get('*', (req: express.Request, res: express.Response) => {
+    res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+});
 
 // Seed initial user if none exist
 async function main() {

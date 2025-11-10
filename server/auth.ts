@@ -1,17 +1,14 @@
-
 // Fix: Use an alias for the Request type from express to avoid potential global type conflicts.
 import { type NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-// Fix: Use a wildcard import for Prisma Client to resolve module issues.
+// Fix: Use a wildcard import for Prisma Client to resolve module resolution errors.
 import * as Prisma from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-very-secret-key-that-should-be-in-env';
 
-// Extend Express Request type to include user payload from JWT
 // Fix: Changed from an interface extending ExpressRequest to a type alias with an intersection.
 // This is a more robust way to augment existing types and can prevent issues where properties
-// from the base type (like 'headers') are not correctly inherited, especially in projects with
-// potential global type conflicts (e.g., from the DOM 'Request' type).
+// from the base type (like 'headers') are not correctly inherited.
 // Fix: Use import('express').Request to avoid global type conflicts.
 export type AuthenticatedRequest = import('express').Request & {
     user?: {
@@ -41,10 +38,8 @@ export const authenticateToken = (requiredRole?: Prisma.Role) => {
             }
             req.user = user as { id: string, role: Prisma.Role };
 
-            // If a specific role is required, check if the user has it
             if (requiredRole && req.user.role !== requiredRole) {
-                 // Admins can access everything a staff member can
-                if(requiredRole === Prisma.Role.Staff && req.user.role === Prisma.Role.Admin) {
+                 if(requiredRole === Prisma.Role.Staff && req.user.role === Prisma.Role.Admin) {
                     return next();
                 }
                 return res.sendStatus(403); // Forbidden

@@ -1,5 +1,4 @@
-// Fix: Added missing imports for types used in new method signatures.
-import { Author, BookCondition, BookCopy, BookTitle, Category, Donor, Language, Role, Sale, User, BookCopyDetails, PayoutData } from '../types';
+import { Author, BookCondition, BookCopy, BookTitle, Category, Donor, Language, Sale, User, BookCopyDetails, PayoutData } from '@/types';
 
 const API_BASE_URL = '/api';
 
@@ -47,10 +46,11 @@ class ApiService {
         }).then(res => this.handleResponse<T>(res));
     }
 
-    private patch<T>(endpoint: string): Promise<T> {
+    private patch<T>(endpoint: string, body?: any): Promise<T> {
         return fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'PATCH',
             headers: this.getHeaders(),
+            body: body ? JSON.stringify(body) : null,
         }).then(res => this.handleResponse<T>(res));
     }
 
@@ -82,7 +82,6 @@ class ApiService {
     }
 
     // Data Getters
-    // Fix: Added specific return types to all data getter methods.
     async getDonors(): Promise<Donor[]> { return this.get('/donors'); }
     async getLanguages(): Promise<Language[]> { return this.get('/languages'); }
     async getCategories(): Promise<Category[]> { return this.get('/categories'); }
@@ -99,7 +98,6 @@ class ApiService {
     }
     
     // Data Creation / Mutation
-    // Fix: Added specific return types to mutation methods.
     async addDonor(data: { name: string; phone?: string; email?: string }): Promise<Donor> {
         return this.post('/donors', data);
     }
@@ -112,7 +110,6 @@ class ApiService {
         return this.patch(`/donors/${id}/toggle-status`);
     }
 
-    // Fix: Used method overloads for type-safe results based on input.
     async addLookupItem(type: 'author', name: string): Promise<Author>;
     async addLookupItem(type: 'language', name: string): Promise<Language>;
     async addLookupItem(type: 'category', name: string): Promise<Category>;

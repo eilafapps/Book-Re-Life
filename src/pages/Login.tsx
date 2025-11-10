@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { User } from '../types';
-import { api } from '../services/mockApi';
-import Button from '../components/ui/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card';
-import Input from '../components/ui/Input';
-import { useToast } from '../components/ui/Toast';
+import { User } from '@/types';
+import { api } from '@/services/mockApi';
+import Button from '@/components/ui/Button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import { useToast } from '@/components/ui/Toast';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;

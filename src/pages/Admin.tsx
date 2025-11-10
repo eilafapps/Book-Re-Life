@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
-import { Author, Category, Language, Role, User } from '../types';
-import { api } from '../services/mockApi';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import Input from '../components/ui/Input';
-import Button from '../components/ui/Button';
-import { useToast } from '../components/ui/Toast';
-import Modal from '../components/ui/Modal';
-import Select from '../components/ui/Select';
+import { Author, Category, Language, Role, User } from '@/types';
+import { api } from '@/services/mockApi';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
+import Modal from '@/components/ui/Modal';
+import Select from '@/components/ui/Select';
 
 type LookupType = 'author' | 'language' | 'category';
 
@@ -103,11 +102,6 @@ const Admin: React.FC<{currentUser: User}> = ({currentUser}) => {
 
     const handleAddItem = async (type: LookupType, name: string) => {
         try {
-            // Fix: No overload matches this call.
-            // The `api.addLookupItem` method has multiple overloads for specific string literals ('author', 'language', 'category').
-            // When called with a variable of a union type (`LookupType`), TypeScript cannot select a single overload.
-            // Using a switch statement narrows the type of the `type` variable within each case block,
-            // allowing TypeScript to match the call to the correct specific overload.
             switch (type) {
                 case 'author':
                     await api.addLookupItem(type, name);

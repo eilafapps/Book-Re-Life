@@ -1,13 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { api } from '../services/mockApi';
-import { BookCopy, Sale } from '../types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import { useToast } from '../components/ui/Toast';
-import Modal from '../components/ui/Modal';
+import { api } from '@/services/mockApi';
+import { BookCopyDetails, Sale } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import { useToast } from '@/components/ui/Toast';
+import Modal from '@/components/ui/Modal';
 
-type CartItem = BookCopy & { title: string; author: string; category: string; salePrice: number };
+type CartItem = BookCopyDetails & { salePrice: number };
 const TAX_RATE = 0.0; // No tax
 
 const ReceiptModal: React.FC<{

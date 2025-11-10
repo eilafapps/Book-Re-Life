@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
 export interface BookDetailsSuggestion {
@@ -7,22 +6,15 @@ export interface BookDetailsSuggestion {
   summary: string;
 }
 
-// Ensure the API_KEY is available in the environment variables
-// Fix: Changed from Vite-specific 'import.meta.env' to 'process.env.API_KEY' to align with
-// the coding guidelines and resolve the TypeScript error 'Property 'env' does not exist on type 'ImportMeta''.
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  // In a real app, you might want to handle this more gracefully.
-  // For this example, we'll log an error.
-  console.error("Gemini API key not found. Please set the API_KEY environment variable.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+// Fix: Initialize the Gemini client directly using the API key from environment variables
+// as per the Gemini API guidelines. The build tool must be configured to expose `process.env.API_KEY`.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
 export const suggestBookDetails = async (title: string): Promise<BookDetailsSuggestion | null> => {
-  if (!API_KEY) {
-    console.error("Cannot call Gemini API: API key is missing.");
+  // Fix: The API key is now handled during initialization.
+  // The guideline is to assume the key is available.
+  if (!process.env.API_KEY) {
+    console.error("Cannot call Gemini API: API key is missing. Make sure it is set in the environment variables and exposed to the client build.");
     return null;
   }
 
@@ -53,9 +45,14 @@ export const suggestBookDetails = async (title: string): Promise<BookDetailsSugg
       },
     });
 
-    const jsonString = response.text.trim();
-    const result = JSON.parse(jsonString);
-    return result as BookDetailsSuggestion;
+    // Safely access the text property
+    const text = response.text;
+    if (text) {
+        const jsonString = text.trim();
+        const result = JSON.parse(jsonString);
+        return result as BookDetailsSuggestion;
+    }
+    return null;
   } catch (error) {
     console.error("Error fetching book details from Gemini API:", error);
     return null;

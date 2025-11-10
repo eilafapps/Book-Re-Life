@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+// These define the allowed values for specific fields, matching your types.ts
+enum BookCondition {
+  New
+  Good
+  Medium
+  Poor
+}
+
+enum Role {
+  Admin
+  Staff
+}
+
+// MODELS
+// Each model represents a table in your database.
+
+model User {
+  id           String @id @default(cuid())
+  username     String @unique
+  passwordHash String
+  role         Role   @default(Staff)
+  isActive     Boolean @default(true)
+}
+
+model Donor {
+  id         String     @id @default(cuid())
+  donorCode  String     @unique
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  bookCopies BookCopy[]
+}
+
+model Language {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  bookTitles BookTitle[]
+}
+
+model Category {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  bookTitles BookTitle[]
+}
+
+model Author {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  bookTitles BookTitle[]
+}
+
+model BookTitle {
+  id         String     @id @default(cuid())
+  bookId     String     @unique
+  title      String
+  authorId   String
+  languageId String
+  categoryId String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  author     Author     @relation(fields: [authorId], references: [id])
+  language   Language   @relation(fields: [languageId], references: [id])
+  category   Category   @relation(fields: [categoryId], references: [id])
+  bookCopies BookCopy[]
+
+  // Ensures we don't create duplicate book titles for the same author/language/category
+  @@unique([title, authorId, languageId, categoryId])
+  @@index([title])
+}
+
+model BookCopy {
+  id              String        @id @default(cuid())
+  bookTitleId     String
+  donorId         String
+  shelfLocation   String?
+  condition       BookCondition
+  buyingPrice     Float
+  sellingPrice    Float
+  isFreeDonation  Boolean
+  note            String?
+  serialNumber    Int
+  bookCode        String        @unique
+  isSold          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  bookTitle       BookTitle     @relation(fields: [bookTitleId], references: [id])
+  donor           Donor         @relation(fields: [donorId], references: [id])
+  saleItems       SaleItem[]
+
+  // Ensures each book copy has a unique serial number for its title
+  @@unique([bookTitleId, serialNumber])
+}
+
+model Sale {
+  id               String     @id @default(cuid())
+  soldAt           DateTime   @default(now())
+  subtotal         Float
+  tax              Float
+  total            Float
+  soldPartyName    String?
+  soldPartyContact String?
+  items            SaleItem[]
+}
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  saleId      String
+  bookCopyId  String   @unique // A book copy can only be sold once
+  priceAtSale Float
+
+  sale        Sale     @relation(fields: [saleId], references: [id])
+  bookCopy    BookCopy @relation(fields: [bookCopyId], references: [id])
+}

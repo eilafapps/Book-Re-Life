@@ -108,7 +108,6 @@ export interface ToastMessage {
   type: 'success' | 'error';
   message: string;
 }
-// Fix: Moved PayoutData interface here to be shared across the application.
 export interface PayoutData {
     donor: Donor;
     totalOwed: number;

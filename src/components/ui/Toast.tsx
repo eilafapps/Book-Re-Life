@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { ToastMessage } from '../../types';
+import { ToastMessage } from '@/types';
 
 interface ToastContextType {
   addToast: (type: 'success' | 'error', message: string) => void;

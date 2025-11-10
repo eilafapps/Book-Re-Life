@@ -1,20 +1,25 @@
-import React, { useState } from 'react';
-import { Page, User } from './types';
-import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import IntakeForm from './pages/IntakeForm';
-import POS from './pages/POS';
-import Inventory from './pages/Inventory';
-import Donors from './pages/Donors';
-import Admin from './pages/Admin';
-import Login from './pages/Login';
-import { ToastProvider } from './components/ui/Toast';
-import DonorPayouts from './pages/DonorPayouts';
-import { api } from './services/mockApi';
+import React, { useState, useEffect } from 'react';
+import { Page, User } from '@/types';
+import Layout from '@/components/Layout';
+import Dashboard from '@/pages/Dashboard';
+import IntakeForm from '@/pages/IntakeForm';
+import POS from '@/pages/POS';
+import Inventory from '@/pages/Inventory';
+import Donors from '@/pages/Donors';
+import Admin from '@/pages/Admin';
+import Login from '@/pages/Login';
+import { ToastProvider } from '@/components/ui/Toast';
+import DonorPayouts from '@/pages/DonorPayouts';
+import { api } from '@/services/mockApi';
+// Fix: Removed initGeminiService as it's no longer needed per Gemini API guidelines.
+// This also resolves the import error.
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activePage, setActivePage] = useState<Page>('dashboard');
+
+  // Fix: Removed client-side fetching of API key and gemini initialization
+  // to adhere to security best practices and Gemini API guidelines.
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);

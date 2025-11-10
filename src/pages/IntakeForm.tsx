@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Author, BookCondition, Category, Donor, Language, BookTitle } from '../types';
-import { api } from '../services/mockApi';
-import { suggestBookDetails } from '../services/geminiService';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
-import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
-import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import { useToast } from '../components/ui/Toast';
+import { Author, BookCondition, Category, Donor, Language, BookTitle } from '@/types';
+import { api } from '@/services/mockApi';
+import { suggestBookDetails } from '@/services/geminiService';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
 
 const FormGroup: React.FC<{ label: string; children: React.ReactNode, hint?: string }> = ({ label, children, hint }) => (
   <div className="space-y-2">
