@@ -16,12 +16,11 @@ Before you begin, ensure you have the following installed on your system:
 
 - **Node.js**: Version 18.x or later.
 - **npm**: Version 7.x or later (which supports npm workspaces).
-- **PostgreSQL**: A running instance of PostgreSQL 15 (for local, non-Docker setup).
-- **Docker & Docker Compose**: (for containerized setup and deployment).
+- **PostgreSQL**: A running instance of PostgreSQL 15. You can install it locally or use a cloud service.
 
-## 3. Local Development Setup (Without Docker)
+## 3. Local Development Setup
 
-Follow these steps to get the application running on your local machine directly.
+Follow these steps to get the application running on your local machine.
 
 ### Step 1: Clone the Repository
 ```bash
@@ -63,7 +62,7 @@ npx prisma migrate dev
 npx prisma db seed
 ```
 
-## 4. Running the Application (Without Docker)
+## 4. Running the Application
 
 Once setup is complete, you can start both the frontend and backend servers concurrently from the root directory.
 
@@ -77,38 +76,27 @@ This command will:
 
 You can now access the application by opening your browser to the frontend URL provided in your terminal.
 
-## 5. Deployment with Docker (for Dokploy)
+## 5. Building for Production
 
-This approach uses Docker to create a self-contained, portable image of your application, which is ideal for deployment on platforms like Dokploy.
+To create a production-ready build of the application:
 
-### Step 1: Using Docker Compose (Recommended for local testing)
-
-The `docker-compose.yml` file is configured to build your application and run it alongside a PostgreSQL database.
-
-1.  **Start the services**: From the root of the project, run:
+1.  **Build both projects**: From the root directory, run:
     ```bash
-    docker-compose up --build
+    npm run build
     ```
-2.  **Access the application**: Once the build is complete and the containers are running, the application will be available at `http://localhost:3001`.
+    - The optimized frontend assets will be placed in `frontend/dist`.
+    - The compiled backend code will be placed in `backend/dist`.
 
-The backend server inside the container will serve both the API and the frontend application.
-
-### Step 2: Manual Docker Build (for understanding or manual deployment)
-
-You can also build and run the Docker image manually.
-
-1.  **Build the image**:
+2.  **Run the Backend**: From the root directory, start the production backend server:
     ```bash
-    docker build -t book-re-life-app .
+    npm run start
     ```
 
-2.  **Run the container**: You will need a running PostgreSQL database accessible from the container.
+3.  **Serve the Frontend**: The `frontend/dist` directory contains static files. You can serve them with any static file server like `serve`:
     ```bash
-    docker run -p 3001:3001 \
-      -e PORT=3001 \
-      -e DATABASE_URL="your_postgres_connection_string" \
-      -e JWT_SECRET="your_super_long_and_secret_jwt_key" \
-      --name book-re-life-container \
-      book-re-life-app
+    # Install serve globally if you haven't already
+    npm install -g serve
+
+    # Serve the frontend build
+    serve -s frontend/dist
     ```
-This `Dockerfile` is ready to be used by any container-based deployment platform.
