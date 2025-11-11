@@ -1,1 +1,123 @@
-���Ȭʋ�
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  Admin
+  Staff
+}
+
+enum BookCondition {
+  New
+  Good
+  Medium
+  Poor
+}
+
+// Models
+model User {
+  id           String @id @default(cuid())
+  username     String @unique
+  passwordHash String
+  role         Role   @default(Staff)
+  isActive     Boolean @default(true)
+}
+
+model Donor {
+  id        String     @id @default(cuid())
+  donorCode String     @unique
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  isActive  Boolean    @default(true)
+  bookCopies BookCopy[]
+}
+
+model Language {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  bookTitles BookTitle[]
+}
+
+model Category {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  bookTitles BookTitle[]
+}
+
+model Author {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  bookTitles BookTitle[]
+}
+
+model BookTitle {
+  id         String     @id @default(cuid())
+  bookId     String     @unique // Unique business identifier for the book title
+  title      String
+  author     Author     @relation(fields: [authorId], references: [id])
+  authorId   String
+  language   Language   @relation(fields: [languageId], references: [id])
+  languageId String
+  category   Category   @relation(fields: [categoryId], references: [id])
+  categoryId String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  copies     BookCopy[]
+
+  @@index([title])
+}
+
+model BookCopy {
+  id              String        @id @default(cuid())
+  bookTitle       BookTitle     @relation(fields: [bookTitleId], references: [id])
+  bookTitleId     String
+  donor           Donor         @relation(fields: [donorId], references: [id])
+  donorId         String
+  shelfLocation   String?
+  condition       BookCondition
+  buyingPrice     Float
+  sellingPrice    Float
+  isFreeDonation  Boolean       @default(false)
+  note            String?
+  serialNumber    Int
+  bookCode        String        @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  isSold          Boolean       @default(false)
+  saleItem        SaleItem?
+
+  @@index([bookCode])
+}
+
+model Sale {
+  id               String     @id @default(cuid())
+  soldAt           DateTime   @default(now())
+  subtotal         Float
+  tax              Float
+  total            Float
+  soldPartyName    String?
+  soldPartyContact String?
+  items            SaleItem[]
+}
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  saleId      String
+  bookCopy    BookCopy @relation(fields: [bookCopyId], references: [id])
+  bookCopyId  String   @unique
+  priceAtSale Float
+}
