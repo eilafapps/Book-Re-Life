@@ -1,3 +1,45 @@
-# This file is intentionally left blank.
-# The application has been converted to run without Docker.
-# Please see README.md for local setup and execution instructions.
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: book-re-life-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bookreflife
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  app:
+    container_name: book-re-life-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      # This points to the postgres service within the Docker network
+      DATABASE_URL: "postgresql://user:password@postgres:5432/bookreflife?schema=public"
+      # IMPORTANT: Use a long, random secret in production
+      JWT_SECRET: "your-super-secret-jwt-key-that-is-very-long"
+      # The port the app will listen on inside the container
+      PORT: 3001
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    # The backend needs the DB to be ready before it can start.
+    # The command below runs migrations before starting the app.
+    # Note: In production, migrations should be handled more carefully.
+    command: >
+      sh -c "
+        npm exec --workspace=backend -- prisma migrate deploy &&
+        npm run start --workspace=backend
+      "
+
+
+volumes:
+  postgres_data:
