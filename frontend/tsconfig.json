@@ -21,7 +21,16 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Vite specific */
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+
+    /* Shared paths */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["../components/*"],
+      "@ui/*": ["../components/ui/*"],
+      "@types": ["../types.ts"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../components", "../types.ts"]
 }
