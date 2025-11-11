@@ -26,7 +26,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     try {
       const { user, token } = await api.login(username, password);
       if (user && token) {
-        // The token is saved to localStorage by the api service
+        // The token is saved to localStorage by the api service interceptor
         onLoginSuccess(user);
       } else {
         addToast('error', 'Login failed: No user or token returned.');

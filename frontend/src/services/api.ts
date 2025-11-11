@@ -1,5 +1,6 @@
-/// <reference types="vite/client" />
 
+// Fix: Removed '/// <reference types="vite/client" />' as it was causing a "Cannot find type definition file" error.
+// The manual definitions below provide the necessary types for import.meta.env.
 // Fix: Manually define types for import.meta.env as a workaround for vite/client types not being loaded.
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;

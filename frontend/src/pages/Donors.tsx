@@ -24,9 +24,8 @@ const Donors: React.FC = () => {
         try {
             const data = await api.getDonors();
             setDonors(data);
-            setFilteredDonors(data);
         } catch (error) {
-            addToast('error', "Failed to load donors.");
+            addToast('error', `Failed to load donors: ${handleApiError(error)}`);
         } finally {
             setLoading(false);
         }

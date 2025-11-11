@@ -34,10 +34,11 @@ const Dashboard: React.FC = () => {
             try {
                 const data = await api.getDashboardData();
                 setKpis(data.kpis);
-                setCharts(data.charts);
-                setLists(data.lists);
+                // Set charts and lists if the backend provides them
+                // setCharts(data.charts);
+                // setLists(data.lists);
             } catch (error) {
-                addToast('error', handleApiError(error));
+                addToast('error', `Dashboard Error: ${handleApiError(error)}`);
             } finally {
                 setLoading(false);
             }
@@ -77,87 +78,20 @@ const Dashboard: React.FC = () => {
                 <Card>
                     <CardHeader>
                         <CardDescription>Books In Stock</CardDescription>
-                        <CardTitle>{kpis?.totalBooks.toLocaleString()}</CardTitle>
+                        <CardTitle>{(kpis?.totalBooks ?? 0).toLocaleString()}</CardTitle>
                     </CardHeader>
                 </Card>
                 <Card>
                     <CardHeader>
                         <CardDescription>Books Sold</CardDescription>
-                        <CardTitle>{kpis?.soldBooks.toLocaleString()}</CardTitle>
+                        <CardTitle>{(kpis?.soldBooks ?? 0).toLocaleString()}</CardTitle>
                     </CardHeader>
                 </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Revenue Over Time</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={charts?.revenueByMonth}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis tickFormatter={(value) => formatCurrency(value as number)}/>
-                                <Tooltip formatter={(value) => formatCurrency(value as number)}/>
-                                <Legend />
-                                <Line type="monotone" dataKey="revenue" stroke="#1f2937" activeDot={{ r: 8 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Top 5 Books by Stock</CardTitle>
-                        <CardDescription>The most numerous titles in your inventory.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <ul className="space-y-4 pt-2">
-                            {lists?.top5BooksByStock && lists.top5BooksByStock.length > 0 ? lists.top5BooksByStock.map((book, index) => (
-                                <li key={index} className="flex justify-between items-center text-sm">
-                                    <span className="truncate pr-4">{book.name}</span>
-                                    <span className="font-bold bg-secondary px-2 py-1 rounded-md text-secondary-foreground">{book.count} copies</span>
-                                </li>
-                            )) : <p className="text-sm text-muted-foreground">Not enough data.</p>}
-                        </ul>
-                    </CardContent>
-                </Card>
-            </div>
-             <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Inventory by Category</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={charts?.inventoryByCategory}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="count" fill="#1f2937" name="Number of Books" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Inventory by Donor</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={charts?.inventoryByDonor}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis allowDecimals={false} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="count" fill="#6b7280" name="Books in Stock" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+            {/* Placeholder for future charts */}
+            <div className="text-center text-muted-foreground p-8">
+                <p>More detailed charts and lists will be available in a future update.</p>
             </div>
         </div>
     );
