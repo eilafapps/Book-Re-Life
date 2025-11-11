@@ -150,9 +150,9 @@ const POS: React.FC = () => {
         setIsCheckingOut(true);
         try {
             const cartForSale = [...cart];
+            // FIX: Removed the extra TAX_RATE argument to match the api.createSale function definition.
             const sale = await api.createSale(
                 cartForSale.map(item => ({ bookCopyId: item.id, price: item.salePrice })),
-                TAX_RATE,
                 {}
             );
             addToast('success', 'Sale completed successfully!');

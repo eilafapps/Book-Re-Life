@@ -1,16 +1,12 @@
-// FIX: Cannot find type definition file for 'vite/client'. This is likely a tsconfig.json issue.
-// Commenting out to allow compilation. Your tsconfig.json should include "vite/client" in the `types` array.
-// /// <reference types="vite/client" />
+/// <reference types="vite/client" />
 
-import axios from 'axios';
-import { Author, BookCondition, BookCopyDetails, Category, Donor, Language, Role, Sale, User } from '../types';
+import axios, { AxiosError } from 'axios';
+import { Author, Category, Donor, Language, Sale, User, BookCopyDetails, BookTitle } from '../types';
 
 const apiClient = axios.create({
   // The VITE_API_BASE_URL must be set in the frontend/.env file
   // Example: VITE_API_BASE_URL=http://localhost:3001
-  // FIX: Added Vite client types reference to resolve `import.meta.env` error.
-  // FIX: Property 'env' does not exist on type 'ImportMeta'. Cast to `any` to fix.
-  baseURL: (import.meta as any).env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -21,34 +17,24 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// This is a simplified error handler. In a real app, you might want a global error handler.
-const handleApiError = (error: unknown, fallbackMessage: string) => {
-    // FIX: The error "Property 'response' does not exist on type 'unknown'" can occur if the
-    // `axios.isAxiosError` type guard is not correctly narrowing the `error` type in the
-    // project's specific TypeScript environment. This revised implementation is more robust.
-    // It safely checks for the response and a nested message property, providing a more
-    // reliable error message, and falls back gracefully.
+// A more robust error handler.
+export const handleApiError = (error: unknown): string => {
     if (axios.isAxiosError(error)) {
-        // FIX: The type guard `axios.isAxiosError` should narrow the type of `error`, but if it fails
-        // due to environment configuration, we can still safely access properties on the now-confirmed
-        // Axios error object.
-        // FIX: Cast to `any` to safely access `response` when the type guard fails to narrow `unknown`.
-        const data = (error as any).response?.data;
-        if (data && typeof data === 'object' && 'message' in data && typeof (data as {message: unknown}).message === 'string') {
-            return (data as {message: string}).message;
+        // FIX: Safely access the message property from the error response data.
+        // The response data can be of 'unknown' type, so we need to check if it's an object
+        // with a 'message' property before accessing it.
+        const serverErrorData = error.response?.data;
+        if (serverErrorData && typeof serverErrorData === 'object' && 'message' in serverErrorData && typeof (serverErrorData as { message: unknown }).message === 'string') {
+            return (serverErrorData as { message: string }).message;
         }
-        // Fallback to the general error message if no specific one is found in the response.
-        // FIX: Cast to `any` to safely access `message` when the type guard fails to narrow `unknown`.
-        return (error as any).message;
+        return error.message;
     }
-
-    // Handle other types of errors.
     if (error instanceof Error) {
         return error.message;
     }
-
-    return fallbackMessage;
+    return 'An unexpected error occurred.';
 };
+
 
 // --- API Service Definition ---
 export const api = {
@@ -98,7 +84,7 @@ export const api = {
        const { data } = await apiClient.get('/lookups');
        return data;
     },
-    async addLookupItem(type: 'author' | 'language' | 'category', name: string): Promise<any> {
+    async addLookupItem(type: 'author' | 'language' | 'category', name: string): Promise<Author | Category | Language> {
         const { data } = await apiClient.post('/lookups', { type, name });
         return data;
     },
@@ -108,7 +94,7 @@ export const api = {
         const { data } = await apiClient.get('/inventory');
         return data;
     },
-     async getBookTitles() {
+     async getBookTitles(): Promise<BookTitle[]> {
         const { data } = await apiClient.get('/inventory/titles');
         return data;
     },
@@ -116,26 +102,21 @@ export const api = {
         const { data } = await apiClient.get(`/inventory/book-copy/${code}`);
         return data;
     },
-    async addBookCopy(bookData: any) { // Define a proper type for this
+    async addBookCopy(bookData: any) { // Consider creating a specific DTO for this
         const { data } = await apiClient.post('/intake', bookData);
         return data;
     },
 
     // POS
-    async createSale(cart: { bookCopyId: string, price: number }[], taxRate: number, saleDetails: { soldPartyName?: string, soldPartyContact?: string }) {
+    async createSale(cart: { bookCopyId: string, price: number }[], saleDetails: { soldPartyName?: string, soldPartyContact?: string }): Promise<Sale> {
         const { data } = await apiClient.post('/pos/sale', { items: cart, ...saleDetails });
         return data;
     },
     
     // AI Suggestions
     async suggestBookDetails(title: string) {
-        try {
-            const { data } = await apiClient.post('/ai/suggest-details', { title });
-            return data;
-        } catch(error) {
-            console.error("AI suggestion failed:", error);
-            throw new Error(handleApiError(error, "Could not get AI suggestions."));
-        }
+        const { data } = await apiClient.post('/ai/suggest-details', { title });
+        return data;
     },
 
     // Dashboard & Reports
