@@ -1,5 +1,4 @@
-
-import { api } from './api';
+import { api, handleApiError } from './api';
 
 export interface BookDetailsSuggestion {
   author: string;
@@ -20,11 +19,12 @@ export const suggestBookDetails = async (title: string): Promise<BookDetailsSugg
   }
 
   try {
+    // This calls our backend endpoint at /ai/suggest-details
     const result = await api.suggestBookDetails(title);
     return result as BookDetailsSuggestion;
   } catch (error) {
-    console.error("Error fetching book details from backend:", error);
-    // The error toast is likely handled in the component calling this function.
-    return null;
+    console.error("Error fetching book details from backend via geminiService:", error);
+    // Re-throw the error so the component calling this function can catch it and show a toast to the user.
+    throw error;
   }
 };

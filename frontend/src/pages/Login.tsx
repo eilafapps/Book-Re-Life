@@ -26,7 +26,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     try {
       const { user, token } = await api.login(username, password);
       if (user && token) {
-        // The token is saved to localStorage by the api service
+        // The token is saved to localStorage by the api service interceptor
         onLoginSuccess(user);
       } else {
         addToast('error', 'Login failed: No user or token returned.');
@@ -81,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </form>
         </CardContent>
         <CardFooter className='text-center text-xs text-muted-foreground justify-center'>
-            <p>Hint: Use admin/admin123 or staff/staff123 from seed data.</p>
+            <p>Use credentials from the seed data to log in.</p>
         </CardFooter>
       </Card>
     </div>

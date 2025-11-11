@@ -1,6 +1,5 @@
 import { PrismaClient, Role, BookCondition } from '@prisma/client';
 import bcrypt from 'bcrypt';
-// FIX: Import `process` to provide type definitions for `process.exit`.
 import process from 'process';
 
 const prisma = new PrismaClient();

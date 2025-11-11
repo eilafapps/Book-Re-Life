@@ -9,9 +9,9 @@ import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import process from 'process';
 import path from 'path';
-// FIX: `__dirname` is not available in ES modules, so we need to derive it.
-import { fileURLToPath } from 'url';
 import fastifyStatic from '@fastify/static';
+// FIX: Import `fileURLToPath` to derive `__dirname` in an ES module environment.
+import { fileURLToPath } from 'url';
 
 
 // Load environment variables
@@ -71,6 +71,10 @@ const AiSuggestSchema = z.object({
 const prisma = new PrismaClient();
 const fastify = Fastify({ logger: true });
 
+// FIX: Define `__dirname` for ES module scope.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Register plugins
 fastify.register(cors);
 fastify.register(helmet, { contentSecurityPolicy: false }); // Lenient CSP for development
@@ -86,10 +90,6 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
     reply.send(err);
   }
 });
-
-// FIX: Define `__dirname` for ES modules.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Serve static frontend files in production
 if (process.env.NODE_ENV === 'production') {
@@ -165,6 +165,10 @@ fastify.patch('/admin/users/:id/toggle-status', { onRequest: [fastify.authentica
     // @ts-ignore
     if (request.user.role !== Role.Admin) return reply.status(403).send({ message: 'Forbidden' });
     const { id } = request.params as any;
+    // @ts-ignore
+    if (id === request.user.userId) {
+        return reply.status(400).send({ message: 'You cannot change your own status.' });
+    }
     const user = await prisma.user.findUnique({ where: { id }});
     if(!user) return reply.status(404).send({ message: 'User not found.' });
 
@@ -433,17 +437,16 @@ fastify.get('/reports/dashboard', { onRequest: [fastify.authenticate] }, async (
 
     const totalBooks = activeBooks.length;
     const soldBooks = soldBooksCopies.length;
-    // FIX: Convert Prisma Decimal type to number for arithmetic operations.
-    const totalRevenue = sales.reduce((sum, sale) => sum + sale.total.toNumber(), 0);
-    const inventoryValue = activeBooks.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
-    const costOfGoodsSold = soldBooksCopies.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
+    // FIX: Use Number() to safely convert Prisma Decimal to a number for arithmetic operations.
+    const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.total), 0);
+    const inventoryValue = activeBooks.reduce((sum, book) => sum + Number(book.buyingPrice), 0);
+    const costOfGoodsSold = soldBooksCopies.reduce((sum, book) => sum + Number(book.buyingPrice), 0);
     const totalProfit = totalRevenue - costOfGoodsSold;
 
     const revenueByMonth = sales.reduce((acc, sale) => {
         const month = new Date(sale.soldAt).toLocaleString('default', { month: 'short', year: 'numeric' });
         if (!acc[month]) acc[month] = 0;
-        // FIX: Convert Prisma Decimal type to number for arithmetic operations.
-        acc[month] += sale.total.toNumber();
+        acc[month] += Number(sale.total);
         return acc;
     }, {} as Record<string, number>);
 
@@ -493,8 +496,8 @@ fastify.get('/reports/payouts', { onRequest: [fastify.authenticate] }, async () 
         if (!payouts[copy.donor.id]) {
             payouts[copy.donor.id] = { donor: copy.donor, totalOwed: 0, soldBooksCount: 0 };
         }
-        // FIX: Convert Prisma Decimal type to number for arithmetic operations.
-        payouts[copy.donor.id].totalOwed += copy.buyingPrice.toNumber();
+        // FIX: Use Number() to safely convert Prisma Decimal to a number.
+        payouts[copy.donor.id].totalOwed += Number(copy.buyingPrice);
         payouts[copy.donor.id].soldBooksCount += 1;
     }
     return Object.values(payouts).sort((a, b) => b.totalOwed - a.totalOwed);

@@ -47,32 +47,33 @@ const IntakeForm: React.FC = () => {
     
     const { addToast } = useToast();
 
-    const fetchData = async () => {
-        try {
-            const [donorsData, lookupsData, bookTitlesData] = await Promise.all([
-                api.getDonors(),
-                api.getLookups(),
-                api.getBookTitles()
-            ]);
-            setDonors(donorsData.filter(d => d.isActive)); // Only show active donors
-            setLanguages(lookupsData.languages);
-            setCategories(lookupsData.categories);
-            setAuthors(lookupsData.authors);
-            setBookTitles(bookTitlesData);
-        } catch (error) {
-            addToast('error', 'Failed to load initial form data.');
-            console.error(error);
-        }
-    };
-    
     useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [donorsData, lookupsData, bookTitlesData] = await Promise.all([
+                    api.getDonors(),
+                    api.getLookups(),
+                    api.getBookTitles()
+                ]);
+                setDonors(donorsData.filter(d => d.isActive)); // Only show active donors
+                setLanguages(lookupsData.languages);
+                setCategories(lookupsData.categories);
+                setAuthors(lookupsData.authors);
+                setBookTitles(bookTitlesData);
+            } catch (error) {
+                addToast('error', 'Failed to load initial form data.');
+                console.error(error);
+            }
+        };
         fetchData();
-    }, []);
+    }, [addToast]);
     
     useEffect(() => {
         if(isFreeDonation) {
             setBuyingPrice('0');
-        } else {
+        }
+        // Auto-calculate selling price only if buying price is being entered
+        if (!isFreeDonation) {
             const cost = parseFloat(buyingPrice);
             if (!isNaN(cost) && cost >= 0) {
                 setSellingPrice((cost * 1.15).toFixed(2));
@@ -162,16 +163,16 @@ const IntakeForm: React.FC = () => {
             // Handle new author
             let finalAuthorId = authorId;
             if (authorId === 'new' && newAuthor) {
-                const createdAuthor = await api.addLookupItem('author', newAuthor);
+                const createdAuthor = await api.addLookupItem('author', newAuthor) as Author;
                 finalAuthorId = createdAuthor.id;
                 setAuthors([...authors, createdAuthor]);
             }
             
-            const finalBuyingPrice = parseFloat(buyingPrice) || 0;
-            const finalSellingPrice = parseFloat(sellingPrice) || 0;
+            const finalBuyingPrice = parseFloat(buyingPrice);
+            const finalSellingPrice = parseFloat(sellingPrice);
 
-            if (!donorId || !title || !finalAuthorId || !languageId || !categoryId) {
-                 addToast('error', 'Please fill all required fields.');
+            if (!donorId || !title || !finalAuthorId || !languageId || !categoryId || isNaN(finalBuyingPrice) || isNaN(finalSellingPrice)) {
+                 addToast('error', 'Please fill all required fields correctly.');
                  setIsSubmitting(false);
                  return;
             }
@@ -302,7 +303,7 @@ const IntakeForm: React.FC = () => {
                             <div className="space-y-4">
                                 <div className="flex items-center space-x-2">
                                     <input type="checkbox" id="isFree" checked={isFreeDonation} onChange={(e) => setIsFreeDonation(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"/>
-                                    <label htmlFor="isFree" className="text-sm font-medium">Donated for free</label>
+                                    <label htmlFor="isFree" className="text-sm font-medium">Donated for free (Buying Cost is SAR 0)</label>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <FormGroup label="Buying Cost (SAR) *">
@@ -337,7 +338,7 @@ const IntakeForm: React.FC = () => {
                 isOpen={isDonorModalOpen} 
                 onClose={() => setIsDonorModalOpen(false)}
                 onDonorAdded={(newDonor) => {
-                    setDonors([...donors, newDonor]);
+                    setDonors(prev => [...prev, newDonor].sort((a,b) => a.name.localeCompare(b.name)));
                     setDonorId(newDonor.id);
                     setIsDonorModalOpen(false);
                     addToast('success', 'New donor added!');

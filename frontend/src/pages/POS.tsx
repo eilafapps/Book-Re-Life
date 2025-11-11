@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { api, handleApiError } from '../services/api';
-import { BookCopy, Sale, BookCopyDetails } from '../types';
+import { Sale, BookCopyDetails } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';

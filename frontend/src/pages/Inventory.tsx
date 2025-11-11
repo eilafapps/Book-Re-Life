@@ -180,7 +180,7 @@ const Inventory: React.FC = () => {
             }
         };
         loadInventory();
-    }, []);
+    }, [addToast]);
 
     useEffect(() => {
         const lowercasedFilter = searchTerm.toLowerCase();
@@ -196,8 +196,10 @@ const Inventory: React.FC = () => {
     
     useEffect(() => {
         if (selectAllCheckboxRef.current) {
-            selectAllCheckboxRef.current.indeterminate =
-                selectedBooks.length > 0 && selectedBooks.length < filteredInventory.length;
+            const numSelected = selectedBooks.length;
+            const numFiltered = filteredInventory.length;
+            selectAllCheckboxRef.current.checked = numSelected === numFiltered && numFiltered > 0;
+            selectAllCheckboxRef.current.indeterminate = numSelected > 0 && numSelected < numFiltered;
         }
     }, [selectedBooks, filteredInventory]);
 
@@ -226,7 +228,9 @@ const Inventory: React.FC = () => {
                             <CardTitle>Inventory</CardTitle>
                             <CardDescription>Browse and manage all books in the system.</CardDescription>
                         </div>
-                        <Button onClick={() => setIsPrintModalOpen(true)}>Print Labels</Button>
+                        <Button onClick={() => setIsPrintModalOpen(true)} disabled={selectedBooks.length === 0}>
+                            Print Labels ({selectedBooks.length})
+                        </Button>
                     </div>
                     <div className="pt-4">
                         <Input 
@@ -243,7 +247,7 @@ const Inventory: React.FC = () => {
                                 <tr>
                                     <th scope="col" className="p-4 w-4">
                                         <div className="flex items-center">
-                                            <input id="checkbox-all" type="checkbox" className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
+                                            <input id="checkbox-all" type="checkbox" className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary" 
                                                 ref={selectAllCheckboxRef}
                                                 onChange={handleSelectAll}
                                                 checked={filteredInventory.length > 0 && selectedBooks.length === filteredInventory.length}
@@ -269,7 +273,7 @@ const Inventory: React.FC = () => {
                                     <tr key={book.id} className="bg-white border-b hover:bg-gray-50">
                                          <td className="w-4 p-4">
                                             <div className="flex items-center">
-                                                <input id={`checkbox-${book.id}`} type="checkbox" className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                <input id={`checkbox-${book.id}`} type="checkbox" className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary"
                                                     checked={!!selectedBooks.find(b => b.id === book.id)}
                                                     onChange={() => handleSelectBook(book)}
                                                 />

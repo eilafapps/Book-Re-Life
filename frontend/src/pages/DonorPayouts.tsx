@@ -28,7 +28,7 @@ const DonorPayouts: React.FC = () => {
             }
         };
         fetchPayouts();
-    }, []);
+    }, [addToast]);
 
     const formatCurrency = (value: number) => new Intl.NumberFormat('en-SA', { style: 'currency', currency: 'SAR' }).format(value);
 

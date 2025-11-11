@@ -78,7 +78,6 @@ const Admin: React.FC<{currentUser: User}> = ({currentUser}) => {
 
 
     const fetchData = async () => {
-        setLoading(true);
         try {
             const [lookupsData, userList] = await Promise.all([
                 api.getLookups(),

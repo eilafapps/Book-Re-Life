@@ -1,13 +1,11 @@
-// FIX: Replaced custom interface with the standard Vite client type reference.
-/// <reference types="vite/client" />
-
 import axios, { AxiosError } from 'axios';
 import { Author, Category, Donor, Language, Sale, User, BookCopyDetails, BookTitle } from '../types';
 
 const apiClient = axios.create({
   // The VITE_API_BASE_URL must be set in the frontend/.env file
   // Example: VITE_API_BASE_URL=http://localhost:3001
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  // FIX: Cast import.meta to any to resolve TypeScript error when vite/client types are not loaded.
+  baseURL: (import.meta as any).env.VITE_API_BASE_URL,
 });
 
 apiClient.interceptors.request.use((config) => {
@@ -20,7 +18,6 @@ apiClient.interceptors.request.use((config) => {
 
 // A more robust error handler.
 export const handleApiError = (error: unknown): string => {
-    // FIX: Explicitly cast to AxiosError to satisfy stricter linters that may not infer from the type guard.
     if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
         const serverErrorData = axiosError.response?.data;
