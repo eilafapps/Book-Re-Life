@@ -1,18 +1,20 @@
+
 import React, { useState } from 'react';
-import { User } from '@/types';
-import { api } from '@/services/mockApi';
-import Button from '@/components/ui/Button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
-import Input from '@/components/ui/Input';
-import { useToast } from '@/components/ui/Toast';
+import { User } from '../types';
+import { api } from '../services/api'; // Corrected import
+import Button from '../components/ui/Button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import { useToast } from '../components/ui/Toast';
+import axios from 'axios';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin123');
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
 
@@ -24,14 +26,19 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }
     setIsLoading(true);
     try {
-      const user = await api.login(username, password);
-      if (user) {
+      const { user, token } = await api.login(username, password);
+      if (user && token) {
+        // The token is saved to localStorage by the api service
         onLoginSuccess(user);
       } else {
-        addToast('error', 'Invalid username or password.');
+        addToast('error', 'Login failed: No user or token returned.');
       }
     } catch (error) {
-      addToast('error', 'An unexpected error occurred during login.');
+        if (axios.isAxiosError(error) && error.response) {
+            addToast('error', error.response.data.message || 'Invalid username or password.');
+        } else {
+            addToast('error', 'An unexpected error occurred during login.');
+        }
     } finally {
       setIsLoading(false);
     }
@@ -80,14 +87,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </form>
         </CardContent>
         <CardFooter className='text-center text-xs text-muted-foreground justify-center'>
-            <p>Hint: admin/admin123 or staff/staff123</p>
+            <p>Default: admin/admin123 or staff/staff123</p>
         </CardFooter>
       </Card>
     </div>
   );
 };
 
-const BookOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-primary"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
+const BookOpenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-primary"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
 
 
 export default Login;

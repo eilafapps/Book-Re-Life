@@ -20,13 +20,6 @@ interface ListData {
     top5BooksByStock: { name: string; count: number }[];
 }
 
-// Fix: Defined an interface for the expected dashboard data structure.
-interface DashboardData {
-    kpis: KpiData;
-    charts: ChartData;
-    lists: ListData;
-}
-
 
 const Dashboard: React.FC = () => {
     const [kpis, setKpis] = useState<KpiData | null>(null);
@@ -38,8 +31,7 @@ const Dashboard: React.FC = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Fix: Cast the API response to the defined interface to ensure type safety.
-                const data = await api.getDashboardData() as DashboardData;
+                const data = await api.getDashboardData();
                 setKpis(data.kpis);
                 setCharts(data.charts);
                 setLists(data.lists);

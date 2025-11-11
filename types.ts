@@ -20,7 +20,7 @@ export interface User {
 }
 
 export interface Donor {
-  id:string;
+  id: string;
   donorCode: string;
   name: string;
   phone?: string;
@@ -108,10 +108,4 @@ export interface ToastMessage {
   id: number;
   type: 'success' | 'error';
   message: string;
-}
-// Fix: Moved PayoutData interface here to be shared across the application.
-export interface PayoutData {
-    donor: Donor;
-    totalOwed: number;
-    soldBooksCount: number;
 }

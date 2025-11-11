@@ -103,22 +103,7 @@ const Admin: React.FC<{currentUser: User}> = ({currentUser}) => {
 
     const handleAddItem = async (type: LookupType, name: string) => {
         try {
-            // Fix: No overload matches this call.
-            // The `api.addLookupItem` method has multiple overloads for specific string literals ('author', 'language', 'category').
-            // When called with a variable of a union type (`LookupType`), TypeScript cannot select a single overload.
-            // Using a switch statement narrows the type of the `type` variable within each case block,
-            // allowing TypeScript to match the call to the correct specific overload.
-            switch (type) {
-                case 'author':
-                    await api.addLookupItem(type, name);
-                    break;
-                case 'language':
-                    await api.addLookupItem(type, name);
-                    break;
-                case 'category':
-                    await api.addLookupItem(type, name);
-                    break;
-            }
+            await api.addLookupItem(type, name);
             addToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} added.`);
             setLoading(true);
             await fetchData();
