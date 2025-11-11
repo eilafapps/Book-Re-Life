@@ -1,4 +1,4 @@
-import { api, handleApiError } from './api';
+import { api } from './api';
 
 export interface BookDetailsSuggestion {
   author: string;
@@ -24,7 +24,7 @@ export const suggestBookDetails = async (title: string): Promise<BookDetailsSugg
     return result as BookDetailsSuggestion;
   } catch (error) {
     console.error("Error fetching book details from backend via geminiService:", error);
-    // Re-throw the error so the component calling this function can catch it and show a toast to the user.
+    // Re-throw the error so the component calling this can catch it and show a toast to the user.
     throw error;
   }
 };

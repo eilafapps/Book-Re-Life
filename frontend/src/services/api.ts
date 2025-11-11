@@ -1,11 +1,21 @@
+/// <reference types="vite/client" />
+
+// Fix: Manually define types for import.meta.env as a workaround for vite/client types not being loaded.
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 import axios, { AxiosError } from 'axios';
 import { Author, Category, Donor, Language, Sale, User, BookCopyDetails, BookTitle } from '../types';
 
 const apiClient = axios.create({
   // The VITE_API_BASE_URL must be set in the frontend/.env file
   // Example: VITE_API_BASE_URL=http://localhost:3001
-  // FIX: Cast import.meta to any to resolve TypeScript error when vite/client types are not loaded.
-  baseURL: (import.meta as any).env.VITE_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 });
 
 apiClient.interceptors.request.use((config) => {

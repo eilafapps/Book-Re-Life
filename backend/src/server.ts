@@ -9,9 +9,9 @@ import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import process from 'process';
 import path from 'path';
-import fastifyStatic from '@fastify/static';
-// FIX: Import `fileURLToPath` to derive `__dirname` in an ES module environment.
+// Fix: Add import for fileURLToPath to resolve __dirname in ES modules.
 import { fileURLToPath } from 'url';
+import fastifyStatic from '@fastify/static';
 
 
 // Load environment variables
@@ -71,10 +71,6 @@ const AiSuggestSchema = z.object({
 const prisma = new PrismaClient();
 const fastify = Fastify({ logger: true });
 
-// FIX: Define `__dirname` for ES module scope.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // Register plugins
 fastify.register(cors);
 fastify.register(helmet, { contentSecurityPolicy: false }); // Lenient CSP for development
@@ -93,6 +89,9 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
 
 // Serve static frontend files in production
 if (process.env.NODE_ENV === 'production') {
+    // Fix: __dirname is not available in ES modules. This calculates it from import.meta.url.
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
     // In a CommonJS environment, `__dirname` is a global variable that gives
     // the directory of the currently executing file.
     // The compiled server.js will be in `backend/dist`, so this path navigates correctly.
@@ -437,10 +436,10 @@ fastify.get('/reports/dashboard', { onRequest: [fastify.authenticate] }, async (
 
     const totalBooks = activeBooks.length;
     const soldBooks = soldBooksCopies.length;
-    // FIX: Use Number() to safely convert Prisma Decimal to a number for arithmetic operations.
-    const totalRevenue = sales.reduce((sum, sale) => sum + Number(sale.total), 0);
-    const inventoryValue = activeBooks.reduce((sum, book) => sum + Number(book.buyingPrice), 0);
-    const costOfGoodsSold = soldBooksCopies.reduce((sum, book) => sum + Number(book.buyingPrice), 0);
+    // Fix: Use .toNumber() to correctly convert Prisma Decimal to a number for arithmetic operations.
+    const totalRevenue = sales.reduce((sum, sale) => sum + sale.total.toNumber(), 0);
+    const inventoryValue = activeBooks.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
+    const costOfGoodsSold = soldBooksCopies.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
     const totalProfit = totalRevenue - costOfGoodsSold;
 
     const revenueByMonth = sales.reduce((acc, sale) => {
@@ -496,7 +495,6 @@ fastify.get('/reports/payouts', { onRequest: [fastify.authenticate] }, async () 
         if (!payouts[copy.donor.id]) {
             payouts[copy.donor.id] = { donor: copy.donor, totalOwed: 0, soldBooksCount: 0 };
         }
-        // FIX: Use Number() to safely convert Prisma Decimal to a number.
         payouts[copy.donor.id].totalOwed += Number(copy.buyingPrice);
         payouts[copy.donor.id].soldBooksCount += 1;
     }
