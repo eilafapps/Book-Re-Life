@@ -10,11 +10,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import process from 'process';
 import path from 'path';
 import fastifyStatic from '@fastify/static';
-import { fileURLToPath } from 'url';
-
-// Fix: Define __dirname for ES Modules since it's not available by default.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+ // Note: running under CommonJS, so __dirname and __filename are available
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
