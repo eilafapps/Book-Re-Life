@@ -1,15 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { api } from '../services/api';
-import { BookCopy, Sale } from '../types';
+import { api, handleApiError } from '../services/api';
+import { BookCopy, Sale, BookCopyDetails } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { useToast } from '../components/ui/Toast';
 import Modal from '../components/ui/Modal';
-import axios from 'axios';
 
-type CartItem = BookCopy & { title: string; author: string; category: string; salePrice: number };
-const TAX_RATE = 0.0; // No tax
+type CartItem = BookCopyDetails & { salePrice: number };
 
 const ReceiptModal: React.FC<{
     isOpen: boolean;
@@ -111,10 +109,6 @@ const POS: React.FC = () => {
             }
 
             const book = await api.getBookCopyByCode(bookCode);
-            if (!book) {
-                addToast('error', 'Book code not found.');
-                return;
-            }
             if (book.isSold) {
                 addToast('error', 'This book has already been sold.');
                 return;
@@ -124,11 +118,7 @@ const POS: React.FC = () => {
             setBookCode('');
             inputRef.current?.focus();
         } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status === 404) {
-                 addToast('error', 'Book code not found.');
-            } else {
-                addToast('error', 'Failed to fetch book details.');
-            }
+            addToast('error', handleApiError(error));
         } finally {
             setIsLoading(false);
         }
@@ -150,19 +140,15 @@ const POS: React.FC = () => {
         setIsCheckingOut(true);
         try {
             const cartForSale = [...cart];
-            // FIX: Removed the extra TAX_RATE argument to match the api.createSale function definition.
             const sale = await api.createSale(
                 cartForSale.map(item => ({ bookCopyId: item.id, price: item.salePrice })),
-                {}
+                {} // Optional sale details like customer name can be added here
             );
             addToast('success', 'Sale completed successfully!');
             setReceiptData({ sale, items: cartForSale });
             setCart([]);
         } catch (error) {
-            const errorMessage = axios.isAxiosError(error) && error.response?.data?.message 
-                ? error.response.data.message 
-                : "An unknown error occurred.";
-            addToast('error', `Checkout failed: ${errorMessage}`);
+            addToast('error', `Checkout failed: ${handleApiError(error)}`);
         } finally {
             setIsCheckingOut(false);
         }

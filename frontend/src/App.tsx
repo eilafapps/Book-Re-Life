@@ -1,23 +1,23 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Page, User, Role } from './types';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import IntakeForm from './pages/IntakeForm';
-import POS from './pages/POS';
-import Inventory from './pages/Inventory';
-import Donors from './pages/Donors';
-import Admin from './pages/Admin';
-import Login from './pages/Login';
 import { ToastProvider } from './components/ui/Toast';
-import DonorPayouts from './pages/DonorPayouts';
-import { jwtDecode } from 'jwt-decode'; // You'll need to add a JWT decoding library
+import { jwtDecode } from 'jwt-decode';
 
-// Helper to decode JWT and get user info
+// Lazy load page components
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const IntakeForm = lazy(() => import('./pages/IntakeForm'));
+const POS = lazy(() => import('./pages/POS'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const Donors = lazy(() => import('./pages/Donors'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Login = lazy(() => import('./pages/Login'));
+const DonorPayouts = lazy(() => import('./pages/DonorPayouts'));
+
+
 const getUserFromToken = (token: string): User | null => {
     try {
         const decoded: { userId: string, username: string, role: Role } = jwtDecode(token);
-        // This is a simplified user object. Adjust based on your JWT payload.
         return { id: decoded.userId, username: decoded.username, role: decoded.role, isActive: true, passwordHash: '' };
     } catch (error) {
         console.error("Invalid token:", error);
@@ -52,21 +52,12 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('authToken');
-    // We don't need to set a page, as the component will re-render to the login page
   };
 
   if (isAuthLoading) {
-      return <div className="flex items-center justify-center min-h-screen">Loading...</div>; // Or a proper spinner
+      return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
   
-  if (!currentUser) {
-    return (
-      <ToastProvider>
-        <Login onLoginSuccess={handleLogin} />
-      </ToastProvider>
-    );
-  }
-
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':
@@ -80,26 +71,36 @@ const App: React.FC = () => {
       case 'donors':
           return <Donors />;
       case 'admin':
-          return <Admin currentUser={currentUser} />;
+          return <Admin currentUser={currentUser!} />;
       case 'payouts':
         return <DonorPayouts />;
       default:
         return <Dashboard />;
     }
   };
+  
+  const loadingFallback = <div className="p-8">Loading page...</div>;
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-secondary/50">
-        <Layout 
-          activePage={activePage} 
-          setActivePage={setActivePage}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-        >
-          {renderPage()}
-        </Layout>
-      </div>
+        {!currentUser ? (
+             <Suspense fallback={loadingFallback}>
+                <Login onLoginSuccess={handleLogin} />
+            </Suspense>
+        ) : (
+            <div className="min-h-screen bg-secondary/50">
+                <Layout 
+                activePage={activePage} 
+                setActivePage={setActivePage}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                >
+                    <Suspense fallback={loadingFallback}>
+                        {renderPage()}
+                    </Suspense>
+                </Layout>
+            </div>
+        )}
     </ToastProvider>
   );
 };

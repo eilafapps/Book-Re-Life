@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Donor } from '../types';
-import { api } from '../services/api';
+import { api, handleApiError } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -74,7 +74,7 @@ const Donors: React.FC = () => {
             handleCloseModal();
             await loadDonors();
         } catch (error) {
-            addToast('error', 'Failed to save donor.');
+            addToast('error', handleApiError(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -86,7 +86,7 @@ const Donors: React.FC = () => {
             addToast('success', 'Donor status updated.');
             await loadDonors();
         } catch (error) {
-            addToast('error', 'Failed to update donor status.');
+            addToast('error', handleApiError(error));
         }
     };
 

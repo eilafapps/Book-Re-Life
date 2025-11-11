@@ -1,9 +1,5 @@
-// FIX: Replaced triple-slash directive with an interface to solve Vite client type errors.
-interface ImportMeta {
-  readonly env: {
-    readonly VITE_API_BASE_URL: string;
-  };
-}
+// FIX: Replaced custom interface with the standard Vite client type reference.
+/// <reference types="vite/client" />
 
 import axios, { AxiosError } from 'axios';
 import { Author, Category, Donor, Language, Sale, User, BookCopyDetails, BookTitle } from '../types';
@@ -24,15 +20,14 @@ apiClient.interceptors.request.use((config) => {
 
 // A more robust error handler.
 export const handleApiError = (error: unknown): string => {
+    // FIX: Explicitly cast to AxiosError to satisfy stricter linters that may not infer from the type guard.
     if (axios.isAxiosError(error)) {
-        // FIX: Safely access the message property from the error response data.
-        // The response data can be of 'unknown' type, so we need to check if it's an object
-        // with a 'message' property before accessing it.
-        const serverErrorData = error.response?.data;
+        const axiosError = error as AxiosError;
+        const serverErrorData = axiosError.response?.data;
         if (serverErrorData && typeof serverErrorData === 'object' && 'message' in serverErrorData && typeof (serverErrorData as { message: unknown }).message === 'string') {
             return (serverErrorData as { message: string }).message;
         }
-        return error.message;
+        return axiosError.message;
     }
     if (error instanceof Error) {
         return error.message;

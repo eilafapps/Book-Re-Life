@@ -1,20 +1,18 @@
-
 import React, { useState } from 'react';
 import { User } from '../types';
-import { api } from '../services/api'; // Corrected import
+import { api, handleApiError } from '../services/api';
 import Button from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import { useToast } from '../components/ui/Toast';
-import axios from 'axios';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { addToast } = useToast();
 
@@ -34,11 +32,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         addToast('error', 'Login failed: No user or token returned.');
       }
     } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-            addToast('error', error.response.data.message || 'Invalid username or password.');
-        } else {
-            addToast('error', 'An unexpected error occurred during login.');
-        }
+        addToast('error', handleApiError(error));
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +56,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="Enter your username"
                 autoComplete="username"
                 required
                 disabled={isLoading}
@@ -87,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </form>
         </CardContent>
         <CardFooter className='text-center text-xs text-muted-foreground justify-center'>
-            <p>Default: admin/admin123 or staff/staff123</p>
+            <p>Hint: Use admin/admin123 or staff/staff123 from seed data.</p>
         </CardFooter>
       </Card>
     </div>

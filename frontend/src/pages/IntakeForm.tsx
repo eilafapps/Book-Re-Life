@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Author, BookCondition, Category, Donor, Language, BookTitle } from '../types';
-import { api } from '../services/api';
+import { api, handleApiError } from '../services/api';
 import { suggestBookDetails } from '../services/geminiService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -149,7 +149,7 @@ const IntakeForm: React.FC = () => {
                 addToast('error', 'Could not get AI suggestions.');
             }
         } catch (error) {
-            addToast('error', 'An error occurred with AI suggestions.');
+            addToast('error', handleApiError(error));
         } finally {
             setIsAiLoading(false);
         }
@@ -167,14 +167,14 @@ const IntakeForm: React.FC = () => {
                 setAuthors([...authors, createdAuthor]);
             }
             
-            if (!donorId || !title || !finalAuthorId || !languageId || !categoryId || (isFreeDonation ? !sellingPrice : !buyingPrice)) {
+            const finalBuyingPrice = parseFloat(buyingPrice) || 0;
+            const finalSellingPrice = parseFloat(sellingPrice) || 0;
+
+            if (!donorId || !title || !finalAuthorId || !languageId || !categoryId) {
                  addToast('error', 'Please fill all required fields.');
                  setIsSubmitting(false);
                  return;
             }
-
-            const finalBuyingPrice = parseFloat(buyingPrice) || 0;
-            const finalSellingPrice = parseFloat(sellingPrice) || 0;
 
             if (finalSellingPrice < finalBuyingPrice) {
                 addToast('error', 'Selling price cannot be less than buying cost.');
@@ -201,8 +201,7 @@ const IntakeForm: React.FC = () => {
             // Refresh book titles for auto-complete
             setBookTitles(await api.getBookTitles());
         } catch (error) {
-            console.error(error);
-            addToast('error', 'Failed to add book.');
+            addToast('error', handleApiError(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -369,7 +368,7 @@ const AddDonorModal: React.FC<{ isOpen: boolean, onClose: () => void, onDonorAdd
             setEmail('');
             setPhone('');
         } catch (error) {
-            addToast('error', 'Failed to add donor.');
+            addToast('error', handleApiError(error));
         } finally {
             setIsSubmitting(false);
         }

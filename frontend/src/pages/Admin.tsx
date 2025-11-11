@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Author, Category, Language, Role, User } from '../types';
-import { api } from '../services/api';
+import { api, handleApiError } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -88,8 +88,8 @@ const Admin: React.FC<{currentUser: User}> = ({currentUser}) => {
             setCategories(lookupsData.categories);
             setAuthors(lookupsData.authors);
             setUsers(userList);
-        } catch {
-            addToast('error', 'Failed to load admin data.');
+        } catch (error) {
+            addToast('error', `Failed to load admin data: ${handleApiError(error)}`);
         } finally {
             setLoading(false);
         }
@@ -103,9 +103,9 @@ const Admin: React.FC<{currentUser: User}> = ({currentUser}) => {
         try {
             await api.addLookupItem(type, name);
             addToast('success', `${type.charAt(0).toUpperCase() + type.slice(1)} added.`);
-            await fetchData();
-        } catch {
-            addToast('error', `Failed to add ${type}.`);
+            await fetchData(); // Refresh all data
+        } catch (error) {
+            addToast('error', handleApiError(error));
         }
     };
 
@@ -124,7 +124,7 @@ const Admin: React.FC<{currentUser: User}> = ({currentUser}) => {
             setNewRole(Role.Staff);
             await fetchData();
         } catch (error) {
-            addToast('error', error instanceof Error ? error.message : 'Failed to create user.');
+            addToast('error', handleApiError(error));
         } finally {
             setIsSubmittingUser(false);
         }
@@ -136,7 +136,7 @@ const Admin: React.FC<{currentUser: User}> = ({currentUser}) => {
             addToast('success', 'User status updated.');
             await fetchData();
         } catch (error) {
-            addToast('error', 'Failed to update user status.');
+            addToast('error', handleApiError(error));
         }
     }
     

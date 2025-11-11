@@ -3,22 +3,76 @@ import dotenv from 'dotenv';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
-import { PrismaClient, Role, BookCondition } from '@prisma/client';
+import { PrismaClient, Role, BookCondition, Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
-// FIX: Import `process` to provide type definitions for `process.exit`.
 import process from 'process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fastifyStatic from '@fastify/static';
+
 
 // Load environment variables
 dotenv.config();
+
+// --- Zod Schemas for Validation ---
+const LoginSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+});
+
+const CreateUserSchema = z.object({
+    username: z.string().min(3),
+    password: z.string().min(6),
+    role: z.nativeEnum(Role),
+});
+
+const DonorSchema = z.object({
+    name: z.string().min(1),
+    email: z.string().email().optional().or(z.literal('')),
+    phone: z.string().optional(),
+});
+
+const LookupSchema = z.object({
+    name: z.string().min(1),
+    type: z.enum(['author', 'category', 'language']),
+});
+
+const IntakeSchema = z.object({
+    donorId: z.string().cuid(),
+    title: z.string().min(1),
+    authorId: z.string(), // can be 'new' or a CUID
+    languageId: z.string().cuid(),
+    categoryId: z.string().cuid(),
+    condition: z.nativeEnum(BookCondition),
+    shelfLocation: z.string().optional(),
+    buyingPrice: z.number().min(0),
+    sellingPrice: z.number().min(0),
+    isFreeDonation: z.boolean(),
+    note: z.string().optional(),
+});
+
+const CreateSaleSchema = z.object({
+    items: z.array(z.object({
+        bookCopyId: z.string().cuid(),
+        price: z.number().min(0),
+    })).min(1),
+    soldPartyName: z.string().optional(),
+    soldPartyContact: z.string().optional(),
+});
+
+const AiSuggestSchema = z.object({
+    title: z.string().min(1),
+});
+
 
 const prisma = new PrismaClient();
 const fastify = Fastify({ logger: true });
 
 // Register plugins
 fastify.register(cors);
-fastify.register(helmet);
+fastify.register(helmet, { contentSecurityPolicy: false }); // Lenient CSP for development
 fastify.register(jwt, {
   secret: process.env.JWT_SECRET || 'a-very-secret-key-that-should-be-in-env',
 });
@@ -32,39 +86,20 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
   }
 });
 
+// Serve static frontend files in production
+if (process.env.NODE_ENV === 'production') {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const frontendDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
 
-// --- Zod Schemas for Validation ---
-const LoginSchema = z.object({
-  username: z.string(),
-  password: z.string(),
-});
-
-// --- Helper Functions ---
-const getBookCopyDetails = async (bookCopyId: string) => {
-    const copy = await prisma.bookCopy.findUnique({
-        where: { id: bookCopyId },
-        include: {
-            bookTitle: {
-                include: {
-                    author: true,
-                    category: true,
-                    language: true,
-                },
-            },
-            donor: true
-        }
+    fastify.register(fastifyStatic, {
+        root: frontendDistPath,
+        prefix: '/',
     });
-    if (!copy) return null;
-    return {
-        ...copy,
-        title: copy.bookTitle.title,
-        author: copy.bookTitle.author.name,
-        category: copy.bookTitle.category.name,
-        language: copy.bookTitle.language.name,
-        donor: copy.donor.name,
-        bookId: copy.bookTitle.bookId,
-        donorCode: copy.donor.donorCode,
-    }
+
+    fastify.setNotFoundHandler((req, reply) => {
+        reply.sendFile('index.html');
+    });
 }
 
 
@@ -103,16 +138,21 @@ fastify.get('/admin/users', { onRequest: [fastify.authenticate] }, async (reques
 });
 
 fastify.post('/admin/users', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    // @ts-ignore
-    if (request.user.role !== Role.Admin) return reply.status(403).send({ message: 'Forbidden' });
-    const { username, password, role } = request.body as any;
-    const existingUser = await prisma.user.findUnique({ where: { username } });
-    if(existingUser) return reply.status(409).send({ message: 'Username already exists.'});
-    
-    const passwordHash = await bcrypt.hash(password, 10);
-    const newUser = await prisma.user.create({ data: { username, passwordHash, role }});
-    const { passwordHash: _, ...userWithoutPassword } = newUser;
-    return userWithoutPassword;
+    try {
+        // @ts-ignore
+        if (request.user.role !== Role.Admin) return reply.status(403).send({ message: 'Forbidden' });
+        
+        const { username, password, role } = CreateUserSchema.parse(request.body);
+        const existingUser = await prisma.user.findUnique({ where: { username } });
+        if(existingUser) return reply.status(409).send({ message: 'Username already exists.'});
+        
+        const passwordHash = await bcrypt.hash(password, 10);
+        const newUser = await prisma.user.create({ data: { username, passwordHash, role }});
+        const { passwordHash: _, ...userWithoutPassword } = newUser;
+        return userWithoutPassword;
+    } catch (error) {
+        reply.status(400).send({ message: 'Invalid data provided.' });
+    }
 });
 
 fastify.patch('/admin/users/:id/toggle-status', { onRequest: [fastify.authenticate] }, async (request, reply) => {
@@ -136,17 +176,25 @@ fastify.get('/donors', { onRequest: [fastify.authenticate] }, async () => {
 });
 
 fastify.post('/donors', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    const { name, email, phone } = request.body as any;
-    const latestDonor = await prisma.donor.findFirst({ orderBy: { donorCode: 'desc' }});
-    const newDonorCode = latestDonor ? (parseInt(latestDonor.donorCode) + 1).toString() : '501';
-    
-    return prisma.donor.create({ data: { name, email, phone, donorCode: newDonorCode } });
+    try {
+        const { name, email, phone } = DonorSchema.parse(request.body);
+        const latestDonor = await prisma.donor.findFirst({ orderBy: { donorCode: 'desc' }});
+        const newDonorCode = latestDonor ? (parseInt(latestDonor.donorCode) + 1).toString() : '501';
+        
+        return prisma.donor.create({ data: { name, email, phone, donorCode: newDonorCode } });
+    } catch(error) {
+        reply.status(400).send({ message: 'Invalid donor data.' });
+    }
 });
 
 fastify.put('/donors/:id', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    const { id } = request.params as any;
-    const { name, email, phone } = request.body as any;
-    return prisma.donor.update({ where: { id }, data: { name, email, phone } });
+    try {
+        const { id } = request.params as any;
+        const { name, email, phone } = DonorSchema.parse(request.body);
+        return prisma.donor.update({ where: { id }, data: { name, email, phone } });
+    } catch(error) {
+        reply.status(400).send({ message: 'Invalid donor data.' });
+    }
 });
 
 fastify.patch('/donors/:id/toggle-status', { onRequest: [fastify.authenticate] }, async (request, reply) => {
@@ -168,15 +216,42 @@ fastify.get('/lookups', { onRequest: [fastify.authenticate] }, async () => {
 });
 
 fastify.post('/lookups', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    const { type, name } = request.body as { type: 'author' | 'category' | 'language', name: string };
-    if (!['author', 'category', 'language'].includes(type)) {
-        return reply.status(400).send({ message: 'Invalid lookup type' });
+    try {
+        const { type, name } = LookupSchema.parse(request.body);
+        const model = prisma[type];
+        // @ts-ignore
+        const existing = await model.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
+        if(existing) return reply.status(409).send({ message: `${type} already exists.`});
+        // @ts-ignore
+        return model.create({ data: { name }});
+    } catch (error) {
+        reply.status(400).send({ message: 'Invalid data provided.'});
     }
-    return prisma[type].create({ data: { name }});
 });
 
 
 // 5. Inventory & Intake Routes
+const getBookCopyDetails = async (bookCopyId: string) => {
+    const copy = await prisma.bookCopy.findUnique({
+        where: { id: bookCopyId },
+        include: {
+            bookTitle: { include: { author: true, category: true, language: true } },
+            donor: true
+        }
+    });
+    if (!copy) return null;
+    return {
+        ...copy,
+        title: copy.bookTitle.title,
+        author: copy.bookTitle.author.name,
+        category: copy.bookTitle.category.name,
+        language: copy.bookTitle.language.name,
+        donor: copy.donor.name,
+        bookId: copy.bookTitle.bookId,
+        donorCode: copy.donor.donorCode,
+    }
+}
+
 fastify.get('/inventory', { onRequest: [fastify.authenticate] }, async () => {
     const copies = await prisma.bookCopy.findMany({
         include: { bookTitle: { include: { author: true, category: true, language: true }}, donor: true },
@@ -200,120 +275,125 @@ fastify.get('/inventory/titles', { onRequest: [fastify.authenticate] }, async ()
 
 fastify.get('/inventory/book-copy/:code', { onRequest: [fastify.authenticate] }, async (request, reply) => {
     const { code } = request.params as any;
-    const copy = await prisma.bookCopy.findUnique({
-        where: { bookCode: code },
-    });
-     if(!copy) return reply.status(404).send({ message: 'Book copy not found.'});
+    const copy = await prisma.bookCopy.findUnique({ where: { bookCode: code } });
+    if(!copy) return reply.status(404).send({ message: 'Book copy not found.'});
     
     return getBookCopyDetails(copy.id);
 });
 
 fastify.post('/intake', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    const data = request.body as any;
-    
-    // Find or create BookTitle
-    let bookTitle = await prisma.bookTitle.findFirst({
-        where: { 
-            title: { equals: data.title, mode: 'insensitive' },
-            authorId: data.authorId,
-            languageId: data.languageId,
-            categoryId: data.categoryId,
-        }
-    });
-
-    if(!bookTitle) {
-        const latestBook = await prisma.bookTitle.findFirst({ orderBy: { bookId: 'desc' }});
-        const newBookId = latestBook ? (parseInt(latestBook.bookId) + 1).toString() : '1000';
-        bookTitle = await prisma.bookTitle.create({
-            data: {
-                title: data.title,
+    try {
+        const data = IntakeSchema.parse(request.body);
+        
+        // Find or create BookTitle
+        let bookTitle = await prisma.bookTitle.findFirst({
+            where: { 
+                title: { equals: data.title, mode: 'insensitive' },
                 authorId: data.authorId,
                 languageId: data.languageId,
                 categoryId: data.categoryId,
-                bookId: newBookId,
             }
         });
-    }
 
-    // Generate serial number
-    const copyCount = await prisma.bookCopy.count({ where: { bookTitleId: bookTitle.id }});
-    const serialNumber = copyCount + 1;
-
-    // Generate book code
-    const donor = await prisma.donor.findUnique({ where: { id: data.donorId }});
-    if(!donor) return reply.status(400).send({ message: 'Invalid donor specified.'});
-    const bookCode = `${bookTitle.bookId}${donor.donorCode}${serialNumber.toString().padStart(4, '0')}`;
-    
-    // Create new book copy
-    return prisma.bookCopy.create({
-        data: {
-            bookTitleId: bookTitle.id,
-            donorId: data.donorId,
-            shelfLocation: data.shelfLocation,
-            condition: data.condition,
-            buyingPrice: data.buyingPrice,
-            sellingPrice: data.sellingPrice,
-            isFreeDonation: data.isFreeDonation,
-            note: data.note,
-            serialNumber,
-            bookCode,
+        if(!bookTitle) {
+            const latestBook = await prisma.bookTitle.findFirst({ orderBy: { bookId: 'desc' }});
+            const newBookId = latestBook ? (parseInt(latestBook.bookId) + 1).toString() : '1000';
+            bookTitle = await prisma.bookTitle.create({
+                data: {
+                    title: data.title,
+                    authorId: data.authorId,
+                    languageId: data.languageId,
+                    categoryId: data.categoryId,
+                    bookId: newBookId,
+                }
+            });
         }
-    });
+
+        const copyCount = await prisma.bookCopy.count({ where: { bookTitleId: bookTitle.id }});
+        const serialNumber = copyCount + 1;
+
+        const donor = await prisma.donor.findUnique({ where: { id: data.donorId }});
+        if(!donor) return reply.status(400).send({ message: 'Invalid donor specified.'});
+        const bookCode = `${bookTitle.bookId}${donor.donorCode}${serialNumber.toString().padStart(4, '0')}`;
+        
+        return prisma.bookCopy.create({
+            data: {
+                bookTitleId: bookTitle.id,
+                donorId: data.donorId,
+                shelfLocation: data.shelfLocation,
+                condition: data.condition,
+                buyingPrice: data.buyingPrice,
+                sellingPrice: data.sellingPrice,
+                isFreeDonation: data.isFreeDonation,
+                note: data.note,
+                serialNumber,
+                bookCode,
+            }
+        });
+    } catch (error) {
+        fastify.log.error(error);
+        reply.status(400).send({ message: 'Invalid intake data provided.'});
+    }
 });
 
 // 6. POS Routes
 fastify.post('/pos/sale', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    const { items } = request.body as { items: { bookCopyId: string, price: number }[] };
+    try {
+        const { items, soldPartyName, soldPartyContact } = CreateSaleSchema.parse(request.body);
 
-    return prisma.$transaction(async (tx) => {
-        // Check if all books are available
-        for (const item of items) {
-            const book = await tx.bookCopy.findUnique({ where: { id: item.bookCopyId }});
-            if (!book || book.isSold) {
-                throw new Error(`Book with ID ${item.bookCopyId} is not available for sale.`);
-            }
-        }
-        
-        const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-        const tax = 0; // No tax logic yet
-        const total = subtotal + tax;
-
-        const sale = await tx.sale.create({
-            data: {
-                subtotal,
-                tax,
-                total,
-                items: {
-                    create: items.map(item => ({
-                        bookCopyId: item.bookCopyId,
-                        priceAtSale: item.price
-                    }))
+        return await prisma.$transaction(async (tx) => {
+            for (const item of items) {
+                const book = await tx.bookCopy.findUnique({ where: { id: item.bookCopyId }});
+                if (!book || book.isSold) {
+                    throw new Error(`Book with code ${book?.bookCode || item.bookCopyId} is not available for sale.`);
                 }
             }
-        });
+            
+            const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+            const tax = 0;
+            const total = subtotal + tax;
 
-        // Mark books as sold
-        await tx.bookCopy.updateMany({
-            where: { id: { in: items.map(i => i.bookCopyId) } },
-            data: { isSold: true }
-        });
+            const sale = await tx.sale.create({
+                data: {
+                    subtotal,
+                    tax,
+                    total,
+                    soldPartyName,
+                    soldPartyContact,
+                    items: {
+                        create: items.map(item => ({
+                            bookCopyId: item.bookCopyId,
+                            priceAtSale: item.price
+                        }))
+                    }
+                }
+            });
 
-        return sale;
-    });
+            await tx.bookCopy.updateMany({
+                where: { id: { in: items.map(i => i.bookCopyId) } },
+                data: { isSold: true }
+            });
+
+            return sale;
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Sale failed.";
+        reply.status(400).send({ message });
+    }
 });
 
 // 7. AI Routes
 fastify.post('/ai/suggest-details', { onRequest: [fastify.authenticate] }, async (request, reply) => {
-    const { title } = request.body as any;
-    const API_KEY = process.env.API_KEY;
-
-    if (!API_KEY) {
-        return reply.status(500).send({ message: "Server is not configured for AI suggestions." });
-    }
-    
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-    
     try {
+        const { title } = AiSuggestSchema.parse(request.body);
+        const API_KEY = process.env.API_KEY;
+
+        if (!API_KEY) {
+            return reply.status(500).send({ message: "Server is not configured for AI suggestions." });
+        }
+        
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
+        
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: `Based on the book title "${title}", suggest the author, a likely category, and a brief one-sentence summary.`,
@@ -347,17 +427,16 @@ fastify.get('/reports/dashboard', { onRequest: [fastify.authenticate] }, async (
 
     const totalBooks = activeBooks.length;
     const soldBooks = soldBooksCopies.length;
-    // FIX: Convert Prisma Decimal to number for calculations to prevent arithmetic errors.
+    // FIX: Convert Prisma Decimal type to number for arithmetic operations.
     const totalRevenue = sales.reduce((sum, sale) => sum + sale.total.toNumber(), 0);
     const inventoryValue = activeBooks.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
     const costOfGoodsSold = soldBooksCopies.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
     const totalProfit = totalRevenue - costOfGoodsSold;
 
-    // This is simplified. A real app might group by month properly.
     const revenueByMonth = sales.reduce((acc, sale) => {
         const month = new Date(sale.soldAt).toLocaleString('default', { month: 'short', year: 'numeric' });
         if (!acc[month]) acc[month] = 0;
-        // FIX: Convert Prisma Decimal to number before adding to prevent arithmetic errors.
+        // FIX: Convert Prisma Decimal type to number for arithmetic operations.
         acc[month] += sale.total.toNumber();
         return acc;
     }, {} as Record<string, number>);
@@ -368,6 +447,13 @@ fastify.get('/reports/dashboard', { onRequest: [fastify.authenticate] }, async (
         acc[category]++;
         return acc;
     }, {} as Record<string, number>);
+
+    const inventoryByDonor = activeBooks.reduce((acc, copy) => {
+            const donor = copy.donor.name || 'Unknown';
+            if (!acc[donor]) acc[donor] = 0;
+            acc[donor]++;
+            return acc;
+        }, {} as Record<string, number>);
 
     const booksByStock = activeBooks.reduce((acc, copy) => {
         const title = copy.bookTitle.title || 'Unknown';
@@ -381,6 +467,7 @@ fastify.get('/reports/dashboard', { onRequest: [fastify.authenticate] }, async (
         charts: {
             revenueByMonth: Object.entries(revenueByMonth).map(([name, value]) => ({ name, revenue: value })),
             inventoryByCategory: Object.entries(inventoryByCategory).map(([name, value]) => ({ name, count: value })),
+            inventoryByDonor: Object.entries(inventoryByDonor).map(([name, value]) => ({ name, count: value })),
         },
         lists: {
             top5BooksByStock: Object.entries(booksByStock).sort(([,a],[,b]) => b - a).slice(0, 5).map(([name, count]) => ({ name, count })),
@@ -400,7 +487,7 @@ fastify.get('/reports/payouts', { onRequest: [fastify.authenticate] }, async () 
         if (!payouts[copy.donor.id]) {
             payouts[copy.donor.id] = { donor: copy.donor, totalOwed: 0, soldBooksCount: 0 };
         }
-        // FIX: Convert Prisma Decimal to number before adding to prevent arithmetic errors.
+        // FIX: Convert Prisma Decimal type to number for arithmetic operations.
         payouts[copy.donor.id].totalOwed += copy.buyingPrice.toNumber();
         payouts[copy.donor.id].soldBooksCount += 1;
     }
@@ -413,7 +500,6 @@ const start = async () => {
   try {
     const port = process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : 3001;
     await fastify.listen({ port, host: '0.0.0.0' });
-    fastify.log.info(`Server listening on ${(fastify.server.address() as any).port}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

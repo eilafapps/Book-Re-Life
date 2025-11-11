@@ -163,7 +163,6 @@ const Inventory: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedBooks, setSelectedBooks] = useState<BookCopyDetails[]>([]);
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-    // Fix: Create a ref for the select-all checkbox to set its indeterminate state.
     const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -194,7 +193,6 @@ const Inventory: React.FC = () => {
         setFilteredInventory(filteredData);
     }, [searchTerm, inventory]);
     
-    // Fix: Use useEffect to programmatically set the indeterminate property of the checkbox.
     useEffect(() => {
         if (selectAllCheckboxRef.current) {
             selectAllCheckboxRef.current.indeterminate =
@@ -244,7 +242,6 @@ const Inventory: React.FC = () => {
                                 <tr>
                                     <th scope="col" className="p-4 w-4">
                                         <div className="flex items-center">
-                                            {/* Fix: Attach the ref and remove the non-standard `indeterminate` prop. */}
                                             <input id="checkbox-all" type="checkbox" className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500" 
                                                 ref={selectAllCheckboxRef}
                                                 onChange={handleSelectAll}
