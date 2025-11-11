@@ -1,12 +1,5 @@
 // FIX: Replaced custom interface with the standard Vite client type reference.
-// Re-added a custom interface because the vite/client reference is not being resolved in the environment.
-interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
+/// <reference types="vite/client" />
 
 import axios, { AxiosError } from 'axios';
 import { Author, Category, Donor, Language, Sale, User, BookCopyDetails, BookTitle } from '../types';

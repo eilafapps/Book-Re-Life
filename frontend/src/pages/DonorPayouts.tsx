@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, handleApiError } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import { Donor } from '../types';
+import { useToast } from '../components/ui/Toast';
 
 interface PayoutData {
     donor: Donor;
@@ -12,6 +13,7 @@ interface PayoutData {
 const DonorPayouts: React.FC = () => {
     const [payouts, setPayouts] = useState<PayoutData[]>([]);
     const [loading, setLoading] = useState(true);
+    const { addToast } = useToast();
 
     useEffect(() => {
         const fetchPayouts = async () => {
@@ -20,7 +22,7 @@ const DonorPayouts: React.FC = () => {
                 const data = await api.getDonorPayouts();
                 setPayouts(data);
             } catch (error) {
-                console.error("Failed to fetch donor payouts:", error);
+                addToast('error', handleApiError(error));
             } finally {
                 setLoading(false);
             }

@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { GoogleGenAI, Type } from '@google/genai';
 import process from 'process';
 import path from 'path';
-// FIX: Import `fileURLToPath` to define `__dirname` in ES modules.
+// FIX: `__dirname` is not available in ES modules, so we need to derive it.
 import { fileURLToPath } from 'url';
 import fastifyStatic from '@fastify/static';
 
@@ -87,11 +87,12 @@ fastify.decorate('authenticate', async function (request: any, reply: any) {
   }
 });
 
+// FIX: Define `__dirname` for ES modules.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Serve static frontend files in production
 if (process.env.NODE_ENV === 'production') {
-    // FIX: Define __dirname in ES module scope to avoid 'Cannot find name __dirname' error.
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
     // In a CommonJS environment, `__dirname` is a global variable that gives
     // the directory of the currently executing file.
     // The compiled server.js will be in `backend/dist`, so this path navigates correctly.
@@ -505,6 +506,7 @@ const start = async () => {
   try {
     const port = process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : 3001;
     await fastify.listen({ port, host: '0.0.0.0' });
+    fastify.log.info(`Server listening on ${port}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

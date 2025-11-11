@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import { api } from '../services/api';
+import { api, handleApiError } from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { useToast } from '../components/ui/Toast';
 
 interface KpiData {
     totalBooks: number;
@@ -25,6 +26,7 @@ const Dashboard: React.FC = () => {
     const [charts, setCharts] = useState<ChartData | null>(null);
     const [lists, setLists] = useState<ListData | null>(null);
     const [loading, setLoading] = useState(true);
+    const { addToast } = useToast();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -35,7 +37,7 @@ const Dashboard: React.FC = () => {
                 setCharts(data.charts);
                 setLists(data.lists);
             } catch (error) {
-                console.error("Failed to fetch dashboard data", error);
+                addToast('error', handleApiError(error));
             } finally {
                 setLoading(false);
             }

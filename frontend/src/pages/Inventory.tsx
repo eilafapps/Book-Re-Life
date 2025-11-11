@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { api } from '../services/api';
+import { api, handleApiError } from '../services/api';
 import { BookCopyDetails } from '../types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card';
 import Input from '../components/ui/Input';
@@ -164,6 +164,7 @@ const Inventory: React.FC = () => {
     const [selectedBooks, setSelectedBooks] = useState<BookCopyDetails[]>([]);
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
+    const { addToast } = useToast();
 
     useEffect(() => {
         const loadInventory = async () => {
@@ -173,7 +174,7 @@ const Inventory: React.FC = () => {
                 setInventory(data);
                 setFilteredInventory(data);
             } catch (error) {
-                console.error("Failed to load inventory:", error);
+                addToast('error', handleApiError(error));
             } finally {
                 setLoading(false);
             }
