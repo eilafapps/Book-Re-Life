@@ -1,4 +1,9 @@
-/// <reference types="vite/client" />
+// FIX: Replaced triple-slash directive with an interface to solve Vite client type errors.
+interface ImportMeta {
+  readonly env: {
+    readonly VITE_API_BASE_URL: string;
+  };
+}
 
 import axios, { AxiosError } from 'axios';
 import { Author, Category, Donor, Language, Sale, User, BookCopyDetails, BookTitle } from '../types';

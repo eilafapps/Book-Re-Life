@@ -347,7 +347,7 @@ fastify.get('/reports/dashboard', { onRequest: [fastify.authenticate] }, async (
 
     const totalBooks = activeBooks.length;
     const soldBooks = soldBooksCopies.length;
-    // FIX: Convert Prisma Decimal to number for calculations.
+    // FIX: Convert Prisma Decimal to number for calculations to prevent arithmetic errors.
     const totalRevenue = sales.reduce((sum, sale) => sum + sale.total.toNumber(), 0);
     const inventoryValue = activeBooks.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
     const costOfGoodsSold = soldBooksCopies.reduce((sum, book) => sum + book.buyingPrice.toNumber(), 0);
@@ -357,7 +357,7 @@ fastify.get('/reports/dashboard', { onRequest: [fastify.authenticate] }, async (
     const revenueByMonth = sales.reduce((acc, sale) => {
         const month = new Date(sale.soldAt).toLocaleString('default', { month: 'short', year: 'numeric' });
         if (!acc[month]) acc[month] = 0;
-        // FIX: Convert Prisma Decimal to number before adding.
+        // FIX: Convert Prisma Decimal to number before adding to prevent arithmetic errors.
         acc[month] += sale.total.toNumber();
         return acc;
     }, {} as Record<string, number>);
@@ -400,7 +400,7 @@ fastify.get('/reports/payouts', { onRequest: [fastify.authenticate] }, async () 
         if (!payouts[copy.donor.id]) {
             payouts[copy.donor.id] = { donor: copy.donor, totalOwed: 0, soldBooksCount: 0 };
         }
-        // FIX: Convert Prisma Decimal to number before adding.
+        // FIX: Convert Prisma Decimal to number before adding to prevent arithmetic errors.
         payouts[copy.donor.id].totalOwed += copy.buyingPrice.toNumber();
         payouts[copy.donor.id].soldBooksCount += 1;
     }
