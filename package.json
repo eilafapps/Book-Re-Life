@@ -1,4 +1,3 @@
-
 {
   "name": "book-re-life-monorepo",
   "version": "1.0.0",
@@ -8,8 +7,12 @@
     "backend"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=frontend & npm run dev --workspace=backend",
+    "dev": "concurrently \"npm:dev --workspace=frontend\" \"npm:dev --workspace=backend\"",
     "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
-    "start": "npm run start --workspace=backend"
+    "start": "npm run start --workspace=backend",
+    "postinstall": "npm run generate --workspace=backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
